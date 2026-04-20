@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "816917690439",
+    "project_id": "dfuapp-a4401",
+    "storage_bucket": "dfuapp-a4401.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:816917690439:android:0f9f0c9022fd22c3c31962",
+        "android_client_info": {
+          "package_name": "com.dfu.healthcare.dfu_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "816917690439-p7kargskgq2faf4dcdeuh6aqr14foqii.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAbC9U2nbgLmvlp87w_RWsEGPXUhecl21U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "816917690439-p7kargskgq2faf4dcdeuh6aqr14foqii.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
