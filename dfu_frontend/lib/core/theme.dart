@@ -20,7 +20,7 @@ class AppTheme {
       surface: glassDeep,
     ),
     textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: glassDeep,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
@@ -36,7 +36,7 @@ class AppTheme {
       surface: glassWhite,
     ),
     textTheme: GoogleFonts.outfitTextTheme(ThemeData.light().textTheme),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: glassWhite,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),

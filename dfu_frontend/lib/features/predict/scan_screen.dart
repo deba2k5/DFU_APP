@@ -1,7 +1,10 @@
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 import '../../widgets/glass_widgets.dart';
 import '../../core/theme.dart';
-import 'dart:ui';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -12,15 +15,61 @@ class ScanScreen extends StatefulWidget {
 
 class _ScanScreenState extends State<ScanScreen> {
   bool _isProcessing = false;
+  File? _selectedImage;
+  final ImagePicker _picker = ImagePicker();
 
-  void _simulateScan() {
-    setState(() => _isProcessing = true);
-    Future.delayed(const Duration(seconds: 3), () {
+  Future<void> _captureAndScanImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(source: source);
+      if (pickedFile == null) return;
+      
+      setState(() {
+        _selectedImage = File(pickedFile.path);
+        _isProcessing = true;
+      });
+
+      // 1. Create Multipart Request
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('http://127.0.0.1:8000/predict'),
+      );
+      
+      // 2. Attach File
+      request.files.add(
+        await http.MultipartFile.fromPath('file', pickedFile.path),
+      );
+
+      // 3. Send Request
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
       if (mounted) {
         setState(() => _isProcessing = false);
-        // Navigate to results or show success
+        
+        // 4. Handle Response
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          
+          // data contains: {"condition": "...", "confidence": "...", "bounding_boxes": [...]}
+          // Navigate to result screen bypassing the mocked data.
+          Navigator.pushReplacementNamed(context, '/results', arguments: {
+            'imagePath': pickedFile.path,
+            'prediction': data,
+          });
+        } else {
+          _showError("Server Error: ${response.statusCode}");
+        }
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+        _showError("Failed to connect to backend: $e");
+      }
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.redAccent));
   }
 
   @override
@@ -28,14 +77,14 @@ class _ScanScreenState extends State<ScanScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Simulated Camera Viewfinder
+          // Camera Viewfinder (Background)
           Container(
             width: double.infinity,
             height: double.infinity,
             color: Colors.black,
-            child: const Center(
-              child: Icon(Icons.camera_alt, color: Colors.white24, size: 100),
-            ),
+            child: _selectedImage != null
+                ? Image.file(_selectedImage!, fit: BoxFit.cover, opacity: const AlwaysStoppedAnimation(0.5))
+                : const Center(child: Icon(Icons.camera_alt, color: Colors.white24, size: 100)),
           ),
           
           // Camera Overlay with Glass effect
@@ -98,14 +147,13 @@ class _ScanScreenState extends State<ScanScreen> {
         child: Stack(
           children: [
             // Corners
-            _ViewfinderCorner(top: 0, left: 0, rotation: 0),
-            _ViewfinderCorner(top: 0, right: 0, rotation: 1.57),
-            _ViewfinderCorner(bottom: 0, left: 0, rotation: -1.57),
-            _ViewfinderCorner(bottom: 0, right: 0, rotation: 3.14),
+            const _ViewfinderCorner(top: 0, left: 0, rotation: 0),
+            const _ViewfinderCorner(top: 0, right: 0, rotation: 1.57),
+            const _ViewfinderCorner(bottom: 0, left: 0, rotation: -1.57),
+            const _ViewfinderCorner(bottom: 0, right: 0, rotation: 3.14),
             
             // Scanning Line Animation (Placeholder)
-            if (_isProcessing)
-              _buildScanningLine(),
+            if (_isProcessing) _buildScanningLine(),
           ],
         ),
       ),
@@ -114,9 +162,7 @@ class _ScanScreenState extends State<ScanScreen> {
 
   Widget _buildScanningLine() {
     return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
+      top: 0, left: 0, right: 0, // In a real app we'd animate `top` from 0 to 450
       child: Container(
         height: 2,
         decoration: BoxDecoration(
@@ -134,9 +180,15 @@ class _ScanScreenState extends State<ScanScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          const _ControlCircle(icon: Icons.photo_library_outlined),
+          // Gallery Picker
           GestureDetector(
-            onTap: _simulateScan,
+            onTap: () => _captureAndScanImage(ImageSource.gallery),
+            child: const _ControlCircle(icon: Icons.photo_library_outlined)
+          ),
+          
+          // Camera Capture
+          GestureDetector(
+            onTap: () => _captureAndScanImage(ImageSource.camera),
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
@@ -144,15 +196,12 @@ class _ScanScreenState extends State<ScanScreen> {
                 border: Border.all(color: Colors.white, width: 4),
               ),
               child: Container(
-                width: 70,
-                height: 70,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
+                width: 70, height: 70,
+                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
               ),
             ),
           ),
+          
           const _ControlCircle(icon: Icons.history),
         ],
       ),
@@ -170,8 +219,8 @@ class _ScanScreenState extends State<ScanScreen> {
             children: [
               const CircularProgressIndicator(color: AppTheme.primaryCyan),
               const SizedBox(height: 20),
-              const Text('AI ANALYZING...', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              Text('Checking for Ulcer Severity', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12)),
+              const Text('AI ANALYZING MODEL', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              Text('Connecting to FastAPI via Groq', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12)),
             ],
           ),
         ),

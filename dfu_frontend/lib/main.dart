@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
 import 'core/theme.dart';
+import 'core/auth_provider.dart';
 import 'widgets/glass_widgets.dart';
 import 'features/auth/login_screen.dart';
 import 'features/dashboard/dashboard_screen.dart';
+import 'features/dashboard/main_wrapper.dart';
 import 'features/predict/scan_screen.dart';
 import 'features/predict/result_screen.dart';
 import 'firebase_options.dart';
@@ -15,7 +18,14 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  runApp(const DFUApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+      ],
+      child: const DFUApp(),
+    ),
+  );
 }
 
 class DFUApp extends StatelessWidget {
@@ -33,7 +43,7 @@ class DFUApp extends StatelessWidget {
       routes: {
         '/': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
-        '/dashboard': (context) => const DashboardScreen(),
+        '/dashboard': (context) => const MainWrapper(),
         '/scan': (context) => const ScanScreen(),
         '/results': (context) => const ResultScreen(),
       },
