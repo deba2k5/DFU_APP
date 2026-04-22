@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -15,7 +15,7 @@ class ScanScreen extends StatefulWidget {
 
 class _ScanScreenState extends State<ScanScreen> {
   bool _isProcessing = false;
-  File? _selectedImage;
+  XFile? _selectedXFile;
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _captureAndScanImage(ImageSource source) async {
@@ -24,20 +24,34 @@ class _ScanScreenState extends State<ScanScreen> {
       if (pickedFile == null) return;
       
       setState(() {
-        _selectedImage = File(pickedFile.path);
+        _selectedXFile = pickedFile;
         _isProcessing = true;
       });
 
       // 1. Create Multipart Request
+      // Using 127.0.0.1:8000 for local backend connection
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('http://127.0.0.1:8000/predict'),
       );
       
       // 2. Attach File
-      request.files.add(
-        await http.MultipartFile.fromPath('file', pickedFile.path),
-      );
+      if (kIsWeb) {
+        // On web, fromPath is not supported. Use fromBytes.
+        final bytes = await pickedFile.readAsBytes();
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            bytes,
+            filename: pickedFile.name,
+          ),
+        );
+      } else {
+        // On mobile, fromPath is efficient as it streams from disk
+        request.files.add(
+          await http.MultipartFile.fromPath('file', pickedFile.path),
+        );
+      }
 
       // 3. Send Request
       var streamedResponse = await request.send();
@@ -50,8 +64,7 @@ class _ScanScreenState extends State<ScanScreen> {
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           
-          // data contains: {"condition": "...", "confidence": "...", "bounding_boxes": [...]}
-          // Navigate to result screen bypassing the mocked data.
+          // data contains: {"success": true, "prediction": {...}, "clinical_report": "...", "ai_insights": "..."}
           Navigator.pushReplacementNamed(context, '/results', arguments: {
             'imagePath': pickedFile.path,
             'prediction': data,
@@ -78,17 +91,17 @@ class _ScanScreenState extends State<ScanScreen> {
       body: Stack(
         children: [
           // Camera Viewfinder (Background)
-          Container(
+            Container(
             width: double.infinity,
             height: double.infinity,
             color: Colors.black,
-            child: _selectedImage != null
-                ? Image.file(_selectedImage!, fit: BoxFit.cover, opacity: const AlwaysStoppedAnimation(0.5))
-                : const Center(child: Icon(Icons.camera_alt, color: Colors.white24, size: 100)),
-          ),
-          
-          // Camera Overlay with Glass effect
-          _buildViewfinderOverlay(),
+            // Show the selected image as a whole (no bounded viewfinder crop)
+            child: _selectedXFile != null
+              ? (kIsWeb
+                ? Image.network(_selectedXFile!.path, fit: BoxFit.contain, opacity: const AlwaysStoppedAnimation(0.5))
+                : Image.network(_selectedXFile!.path, fit: BoxFit.contain, opacity: const AlwaysStoppedAnimation(0.5)))
+              : const Center(child: Icon(Icons.camera_alt, color: Colors.white24, size: 100)),
+            ),
 
           // UI Elements
           SafeArea(

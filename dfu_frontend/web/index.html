@@ -42,5 +42,26 @@
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
   <script src="flutter_bootstrap.js" async></script>
+  <script>
+    // Shim for wallets: provide a graceful no-op `window.ethereum` when no extension is installed.
+    // Prevents third-party scripts from throwing "MetaMask extension not found" errors in web builds.
+    (function() {
+      try {
+        if (typeof window !== 'undefined' && typeof window.ethereum === 'undefined') {
+          window.ethereum = {
+            isMetaMask: false,
+            request: function() {
+              return Promise.reject(new Error('No wallet extension available'));
+            },
+            on: function() {},
+            removeListener: function() {},
+            addListener: function() {},
+          };
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+  </script>
 </body>
 </html>

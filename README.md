@@ -1,109 +1,105 @@
-# 🩺 DFU Screening Platform v2.0
+# Diabetic Foot Ulcer (DFU) Classification System
 
-![Banner](assets/banner.png)
-
-## 🚀 Overview
-The **DFU Screening Platform** is an advanced, AI-powered diagnostic ecosystem designed for the early detection and management of **Diabetic Foot Ulcers (DFU)**. Leveraging an agentic AI architecture, the platform automates the clinical pathway from image normalization to severity classification and structured clinical reporting.
-
-Built with a high-end **Glassmorphism UI**, the system provides a premium experience for both clinicians and patients, ensuring that diabetic care is accessible, intelligent, and real-time.
+An AI-powered full-stack SaaS application for the clinical assessment and staging of Diabetic Foot Ulcers. The platform leverages a fine-tuned MobileNetV3 computer vision model for predicting Wagner scale grades (0-5) and is integrated with Groq's Llama-4 model to provide dynamic, professional clinical recommendations and an interactive medical AI assistant.
 
 ---
 
-## 🧠 Agentic AI Pipeline
-The platform utilizes a multi-agent orchestration layer to process clinical data:
+## 🌟 Key Features
 
-1.  **🔍 Preprocessor Agent**: Normalizes raw clinical imagery, handling lighting, artifacts, and resolution scaling using **Pillow** and **NumPy**.
-2.  **🩺 Diagnostician Agent**: An AI classifier that maps wounds to the **Wagner Scale** (Grades 0-3). Currently using a high-fidelity heuristic model designed to be replaced by a **DenseNet-121** ONNX weights.
-3.  **📝 Reporter Agent**: Translates technical diagnosis into actionable clinical guidelines and wound management protocols.
-4.  **💬 Assistant Agent**: Powered by **Groq Llama-4**, this agent provides real-time AI insights and a streaming chat interface for complex medical queries.
-
----
-
-## 🛠️ Technology Stack
-
-### Backend (`dfu_backend`)
-- **Framework**: [FastAPI](https://fastapi.tiangolo.com/) (Python 3.10+)
-- **AI Engine**: [Groq](https://groq.com/) (Llama-4 70B/8B)
-- **Processing**: NumPy, Pillow
-- **Deployment**: Vercel-ready with `vercel.json`
-- **Streaming**: Server-Sent Events (SSE) for real-time AI chat.
-
-### Frontend (`dfu_frontend`)
-- **Framework**: [Flutter](https://flutter.dev/) (SDK ^3.11.3)
-- **State Management**: [Provider](https://pub.dev/packages/provider)
-- **UI/UX**: `glassmorphism_ui`, `google_fonts`, `animations`
-- **Backend Services**: [Firebase](https://firebase.google.com/) (Auth, Firestore)
-- **Networking**: `http` for REST & Streaming APIs
+*   **Clinical-Grade AI Diagnosis:** Uses a MobileNetV3-Small architecture fine-tuned on a 6-class DFU dataset, incorporating an Active Contour (Snake algorithm) preprocessor for region-of-interest extraction.
+*   **Agentic Pipeline:**
+    *   *Preprocessor Agent:* Normalizes and segments clinical images.
+    *   *Diagnostician Agent:* Classifies the ulcer severity (Grade 0 to Grade 5).
+    *   *Reporter Agent:* Formats the findings into structured medical reports.
+    *   *Assistant Agent:* A Groq-powered Llama-4 agent that generates precise next-step clinical summaries and supports real-time Q&A.
+*   **Cross-Platform Frontend:** A beautiful, responsive Flutter application featuring a modern glassmorphism aesthetic.
 
 ---
 
-## 📁 Project Structure
-```text
-.
-├── dfu_backend/          # FastAPI server & AI Agents
-│   ├── agents/           # Specialized AI Agent logic
-│   ├── api/              # API Route definitions
-│   ├── models/           # Data schemas & Model wrappers
-│   └── main.py           # Server entry point
-├── dfu_frontend/         # Flutter Mobile/Web Application
-│   ├── lib/              # Core application logic
-│   │   ├── features/     # Feature-based architecture
-│   │   ├── core/         # Themes & Providers
-│   │   └── widgets/      # Shared Glassmorphism components
-│   └── pubspec.yaml      # Flutter dependencies
-└── assets/               # Branding & Documentation assets
-```
+## 🏗️ System Architecture
+
+*   **Frontend:** Flutter (Mobile/Web/Desktop)
+*   **Backend:** Python, FastAPI
+*   **Machine Learning:** PyTorch, Torchvision, Scikit-Image, OpenCV
+*   **LLM Integration:** Groq API (Llama-4-scout)
 
 ---
 
-## 🚦 Getting Started
+## 🚀 Getting Started
 
-### Backend Setup
-1. Navigate to `dfu_backend`.
-2. Create a virtual environment:
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # Windows: .venv\Scripts\activate
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Configure `.env`:
-   ```env
-   GROQ_API_KEY=your_key_here
-   ```
-5. Run the server:
-   ```bash
-   uvicorn main:app --reload
-   ```
+Follow the instructions below to set up and run the frontend and backend servers locally.
 
-### Frontend Setup
-1. Navigate to `dfu_frontend`.
-2. Ensure you have the Flutter SDK installed.
-3. Fetch packages:
-   ```bash
-   flutter pub get
-   ```
-4. Configure Firebase:
-   - Place your `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) in the respective directories.
-5. Launch the app:
-   ```bash
-   flutter run
-   ```
+### 1. Backend Setup (FastAPI)
+
+The backend handles the AI inference and interacts with the Groq API.
+
+**Prerequisites:** Python 3.9+
+
+1.  Navigate to the backend directory:
+    ```bash
+    cd dfu_backend
+    ```
+2.  Set up a virtual environment (optional but recommended):
+    ```bash
+    python -m venv .venv
+    # Windows
+    .\.venv\Scripts\activate
+    # macOS/Linux
+    source .venv/bin/activate
+    ```
+3.  Install the required Python packages:
+    ```bash
+    pip install -r requirements.txt
+    ```
+4.  Configure Environment Variables:
+    *   Ensure there is a `.env` file in the `dfu_backend` directory.
+    *   Add your Groq API key:
+        ```env
+        GROQ_API_KEY=your_groq_api_key_here
+        ```
+5.  Start the FastAPI Server:
+    ```bash
+    python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
+    ```
+    The API will be available at `http://127.0.0.1:8000`. You can view the API documentation at `http://127.0.0.1:8000/docs`.
+
+### 2. Frontend Setup (Flutter)
+
+The frontend provides the user interface for capturing/uploading images and viewing the clinical reports.
+
+**Prerequisites:** Flutter SDK installed and configured.
+
+1.  Navigate to the frontend directory:
+    ```bash
+    cd dfu_frontend
+    ```
+2.  Install Flutter dependencies:
+    ```bash
+    flutter pub get
+    ```
+3.  Run the application:
+    *   **To run on Chrome (Web):** (Recommended for quick testing)
+        ```bash
+        flutter run -d chrome
+        ```
+    *   **To run on an Android device/emulator:**
+        Ensure your emulator is running or device is connected via USB debugging.
+        ```bash
+        flutter run -d android
+        ```
+    *   **To run on Windows Desktop:**
+        *(Note: Requires CMake 3.22+ and Visual Studio with C++ workload installed)*
+        ```bash
+        flutter run -d windows
+        ```
 
 ---
 
-## 📈 Roadmap & Future Scope
-- [ ] Integration of real DenseNet-121 ONNX weights for local inference.
-- [ ] Multi-lingual support for rural healthcare workers.
-- [ ] Offline-first capability with Hive local storage.
-- [ ] Advanced Grad-CAM visualization for AI explainability.
+## 📊 Wagner Scale Classes Supported
 
----
-
-## 📄 License
-This project is for clinical research and educational purposes. See `LICENSE` for details (if applicable).
-
----
-*Developed with ❤️ for Advanced Diabetic Care.*
+*   **Grade 0:** Pre-ulcerative lesion, healed ulcer, or presence of bony deformity.
+*   **Grade 1:** Superficial ulcer without subcutaneous tissue involvement.
+*   **Grade 2:** Deep ulcer with penetration to the tendon, bone, or joint capsule.
+*   **Grade 3:** Deep ulcer with osteitis, abscess, or osteomyelitis.
+*   **Grade 4:** Localized gangrene (e.g., toe or forefoot).
+*   **Grade 5:** Extensive gangrene involving the whole foot.

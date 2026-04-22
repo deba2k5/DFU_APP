@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../../widgets/glass_widgets.dart';
 import '../../core/theme.dart';
@@ -14,17 +14,35 @@ class ResultScreen extends StatelessWidget {
     // backend returns: {"success": true, "prediction": {...}, "clinical_report": "...", "ai_insights": "..."}
     final Map<String, dynamic>? data = args?['prediction'];
     final Map<String, dynamic>? prediction = data?['prediction'];
-    final String clinicalReport = data?['clinical_report'] ?? "";
-    final String aiInsights = data?['ai_insights'] ?? "";
+    final dynamic clinicalReportRaw = data?['clinical_report'];
+    String clinicalReport = "";
+    if (clinicalReportRaw is String) {
+      clinicalReport = clinicalReportRaw;
+    } else if (clinicalReportRaw is Map) {
+      clinicalReport = clinicalReportRaw['primary_note']?.toString() ?? "";
+    } else {
+      clinicalReport = clinicalReportRaw?.toString() ?? "";
+    }
+    
+    final String aiInsights = data?['ai_insights']?.toString() ?? "";
 
-    String rawCondition = prediction?['condition'] ?? "Unknown Diagnostic";
-    String rawConfidence = prediction?['confidence'] ?? "0.0";
+    String rawCondition = prediction?['condition']?.toString() ?? "Unknown Diagnostic";
+    String rawConfidence = prediction?['confidence']?.toString() ?? "0.0";
     
     int stage = 0;
-    if (rawCondition.toLowerCase().contains("moderate")) stage = 2;
-    else if (rawCondition.toLowerCase().contains("critical") || rawCondition.toLowerCase().contains("severe")) stage = 3;
-    else if (rawCondition.toLowerCase().contains("mild")) stage = 1;
-    else if (rawCondition.toLowerCase().contains("normal")) stage = 0;
+    if (rawCondition.toLowerCase().contains("extensive gangrene")) stage = 5;
+    else if (rawCondition.toLowerCase().contains("localized gangrene")) stage = 4;
+    else if (rawCondition.toLowerCase().contains("osteomyelitis") || rawCondition.toLowerCase().contains("grade 3")) stage = 3;
+    else if (rawCondition.toLowerCase().contains("deep ulcer") || rawCondition.toLowerCase().contains("grade 2")) stage = 2;
+    else if (rawCondition.toLowerCase().contains("surface ulcer") || rawCondition.toLowerCase().contains("grade 1")) stage = 1;
+    else if (rawCondition.toLowerCase().contains("healthy") || rawCondition.toLowerCase().contains("grade 0")) stage = 0;
+    else {
+      // Fallback: try to extract number from condition string if it says "Grade X"
+      final match = RegExp(r'grade\s*(\d)', caseSensitive: false).firstMatch(rawCondition);
+      if (match != null) {
+        stage = int.tryParse(match.group(1) ?? "0") ?? 0;
+      }
+    }
 
     double conf = double.tryParse(rawConfidence) ?? 0.89;
 
@@ -107,13 +125,13 @@ class ResultScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(25),
         border: Border.all(color: Colors.white10),
         image: imagePath != null 
-          ? DecorationImage(
-              image: FileImage(File(imagePath)),
-              fit: BoxFit.cover,
+              ? DecorationImage(
+              image: NetworkImage(imagePath), // NetworkImage works for both blob URLs (web) and http URLs
+              fit: BoxFit.contain,
             )
           : const DecorationImage(
               image: NetworkImage('https://images.unsplash.com/photo-1576091160550-217359f49f4c?auto=format&fit=crop&q=80&w=400'),
-              fit: BoxFit.cover,
+              fit: BoxFit.contain,
             ),
       ),
       child: Center(
@@ -171,7 +189,7 @@ class ResultScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildMetric('Confidence', '${(confidence * 100).toInt()}%'),
-              _buildMetric('Model', 'Groq LLaMA Vision'),
+              _buildMetric('Model', 'MobileNetV3 Prediction'),
               _buildMetric('Grade', 'Wagner $stage'),
             ],
           ),
@@ -249,11 +267,14 @@ class ResultScreen extends StatelessWidget {
       case 1: return Colors.yellowAccent;
       case 2: return Colors.orangeAccent;
       case 3: return Colors.redAccent;
+      case 4: return Colors.deepOrange;
+      case 5: return Colors.deepPurpleAccent;
       default: return Colors.blueAccent;
     }
   }
 
   String _getRecommendation(int stage) {
+    if (stage >= 4) return 'CRITICAL: Gangrene detected. Immediate surgical consultation and emergency care required.';
     if (stage >= 2) return 'URGENT: Recommended immediate clinical inspection and debridement.';
     return 'Observation required. Schedule follow-up scan in 48 hours.';
   }
