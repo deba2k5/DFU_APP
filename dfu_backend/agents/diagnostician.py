@@ -1,34 +1,83 @@
 import numpy as np
+import torch
+import torch.nn as nn
+import torchvision.models as models
+import torchvision.transforms as transforms
+import os
 
 class DiagnosticianAgent:
     """
     Core AI Agent responsible for DFU classification.
-    Wraps the DenseNet-121 model and interprets prediction probabilities 
-    into medical grades (Wagner Scale).
+    Uses a trained MobileNetV3-Small model to predict Wagner Scale grades.
     """
-    def __init__(self):
-        # In a production environment, this would load the model weights
-        # self.model = load_model('models/densenet_dfu.pth')
-        self.classes = ['Stage 0 - Healthy', 'Stage 1 - Mild', 'Stage 2 - Moderate', 'Stage 3 - High Risk']
+    def __init__(self, model_path="models/ulcer_classification_mobilenetv3.pth"):
+        # NOTE: model's output ordering had Grade 1 and Grade 3 swapped during training.
+        # Quick mapping fix: swap entries for index 1 and 3 so predictions align with labels.
+        self.classes = [
+            'Grade 0 - Healthy',
+            'Grade 3 - Osteomyelitis',  # swapped to match model index 1
+            'Grade 2 - Deep Ulcer',
+            'Grade 1 - Surface Ulcer',  # swapped to match model index 3
+            'Grade 4 - Localized Gangrene',
+            'Grade 5 - Extensive Gangrene'
+        ]
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model = self._load_model(model_path)
+        self.transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
 
-    def infer(self, processed_image: np.ndarray):
-        """
-        Simulates model inference. In production, this would use torch/tensorflow
-        to get actual probabilities from processed_image.
-        """
-        # Placeholder probability distribution
-        # Assuming Stage 2 detection for demonstration
-        probs = [0.05, 0.05, 0.85, 0.05]
+    def _load_model(self, model_path):
+        # Initialize MobileNetV3-Small structure
+        model = models.mobilenet_v3_small()
+        num_ftrs = model.classifier[3].in_features
+        model.classifier[3] = nn.Linear(num_ftrs, len(self.classes))
         
-        predicted_idx = np.argmax(probs)
-        confidence = probs[predicted_idx]
+        # Determine absolute path to model
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        abs_model_path = os.path.join(base_dir, model_path)
         
+        if os.path.exists(abs_model_path):
+            checkpoint = torch.load(abs_model_path, map_location=self.device)
+            model.load_state_dict(checkpoint['model_state_dict'])
+            print(f"Loaded trained model from {abs_model_path}")
+        else:
+            print(f"Warning: Model file not found at {abs_model_path}. Using uninitialized model.")
+        
+        model.to(self.device)
+        model.eval()
+        return model
+
+    def infer(self, processed_image: np.ndarray) -> dict:
+        """
+        Performs model inference on the processed image.
+        """
+        # 1. Transform image
+        input_tensor = self.transform(processed_image).unsqueeze(0).to(self.device)
+
+        # 2. Inference
+        with torch.no_grad():
+            outputs = self.model(input_tensor)
+            probs = torch.softmax(outputs, dim=1)[0]
+            confidence, predicted_idx = torch.max(probs, 0)
+
+        predicted_idx = int(predicted_idx.item())
+        confidence = float(confidence.item())
+        probs_list = probs.cpu().numpy().tolist()
+
         return {
             "stage": predicted_idx,
             "label": self.classes[predicted_idx],
-            "confidence": float(confidence),
-            "wagner_scale": f"Grade {predicted_idx}"
+            "condition": self.classes[predicted_idx], # Alias for frontend compatibility
+            "confidence": f"{confidence:.4f}", # String formatted for frontend parsing
+            "wagner_scale": f"Grade {predicted_idx}",
+            "probabilities": {
+                self.classes[i]: round(probs_list[i], 4) for i in range(len(self.classes))
+            }
         }
 
+
 # Instance for agent registry
+# Note: In production/deployment, ensure models/ folder exists and contains the weights.
 diagnostician_agent = DiagnosticianAgent()

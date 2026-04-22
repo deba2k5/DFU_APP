@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/*.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/health",
+      "dest": "api/health.py"
+    },
+    {
+      "src": "/predict",
+      "dest": "api/predict.py"
+    },
+    {
+      "src": "/chat",
+      "dest": "api/chat.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "api/health.py"
+    }
+  ],
+  "env": {
+    "PYTHONUNBUFFERED": "1"
+  }
+}
