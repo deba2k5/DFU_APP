@@ -1,11 +1,19 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/*.py",
-      "use": "@vercel/python"
+  "buildCommand": "echo 'Python build complete'",
+  "outputDirectory": ".",
+  "functions": {
+    "api/health.py": {
+      "runtime": "python3.11"
+    },
+    "api/predict.py": {
+      "runtime": "python3.11",
+      "maxDuration": 60
+    },
+    "api/chat.py": {
+      "runtime": "python3.11"
     }
-  ],
+  },
   "routes": [
     {
       "src": "/health",

@@ -57,7 +57,7 @@ GeneratedPluginRegistrant.dart
 *.log
 training*.log
 
-# Environment files
+# Environment files (IMPORTANT: keep API keys private!)
 .env
 .env.local
 .env.*.local
